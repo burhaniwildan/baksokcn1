@@ -6,11 +6,13 @@ if (!isset($_GET['id'])) {
     exit;
 }
 
-$id = mysqli_real_escape_string($conn, $_GET['id']);
+$id = (int) $_GET['id'];
 
-// Ambil transaksi utama
+/* ================= AMBIL TRANSAKSI ================= */
 $q_transaksi = mysqli_query($conn, "
-SELECT * FROM transaksi WHERE id = '$id'
+    SELECT *
+    FROM transaksi
+    WHERE id = $id
 ");
 
 if (!$q_transaksi || mysqli_num_rows($q_transaksi) == 0) {
@@ -20,12 +22,16 @@ if (!$q_transaksi || mysqli_num_rows($q_transaksi) == 0) {
 
 $transaksi = mysqli_fetch_assoc($q_transaksi);
 
-// Ambil detail produk
+/* ================= AMBIL DETAIL MENU ================= */
 $q_detail = mysqli_query($conn, "
-SELECT dt.jumlah, dt.harga_satuan, dt.subtotal, p.nama_produk
-FROM detail_transaksi dt
-JOIN produk p ON dt.id_produk = p.id
-WHERE dt.id_transaksi = '$id'
+    SELECT
+        dt.jumlah,
+        dt.harga_satuan,
+        dt.subtotal,
+        m.nama_menu
+    FROM detail_transaksi dt
+    JOIN menu m ON dt.id_menu = m.id
+    WHERE dt.id_transaksi = $id
 ");
 
 if (!$q_detail) {
@@ -33,22 +39,24 @@ if (!$q_detail) {
     exit;
 }
 
-$produk_list = '';
-$total = 0;
+$menu_list = '';
 
 while ($row = mysqli_fetch_assoc($q_detail)) {
-    $subtotal = $row['subtotal'];
-    $total += $subtotal;
-
-    $produk_list .= '<div>' . htmlspecialchars($row['nama_produk']) . ' (' . $row['jumlah'] . ' x Rp ' . number_format($row['harga_satuan'], 0, ',', '.') . ' = Rp ' . number_format($subtotal, 0, ',', '.') . ')</div>';
+    $menu_list .= '
+        <div>
+            ' . htmlspecialchars($row['nama_menu']) . '
+            (' . $row['jumlah'] . ' x Rp ' . number_format($row['harga_satuan'], 0, ',', '.') . '
+            = <b>Rp ' . number_format($row['subtotal'], 0, ',', '.') . '</b>)
+        </div>
+    ';
 }
 
+/* ================= OUTPUT ================= */
 echo '<table class="table table-bordered">';
 echo '<tr><th width="30%">ID Transaksi</th><td>' . $transaksi['id'] . '</td></tr>';
 echo '<tr><th>Tanggal</th><td>' . $transaksi['tanggal'] . '</td></tr>';
 echo '<tr><th>Total Transaksi</th><td>Rp ' . number_format($transaksi['total'], 0, ',', '.') . '</td></tr>';
 echo '<tr><th>Pembayaran</th><td>Rp ' . number_format($transaksi['pembayaran'], 0, ',', '.') . '</td></tr>';
 echo '<tr><th>Kembalian</th><td>Rp ' . number_format($transaksi['kembalian'], 0, ',', '.') . '</td></tr>';
-echo '<tr><th>Produk</th><td>' . $produk_list . '</td></tr>';
+echo '<tr><th>Menu</th><td>' . $menu_list . '</td></tr>';
 echo '</table>';
-?>

@@ -1,5 +1,12 @@
 <?php
 require 'conn.php';
+session_start();
+
+/* ================= PROTEKSI PEMBELI ================= */
+if (!isset($_SESSION['user']) || $_SESSION['user']['role_id'] != 2) {
+    header('location:index.php');
+    exit;
+}
 
 /* ================= HELPER ================= */
 function formatRupiah($angka)
@@ -9,32 +16,39 @@ function formatRupiah($angka)
 
 /* ================= VALIDASI ID ================= */
 if (!isset($_GET['id'])) {
-    die("ID transaksi tidak ditemukan.");
+    die("ID Pembayaran tidak ditemukan.");
 }
 
-$id = (int)$_GET['id'];
+$id = (int) $_GET['id'];
 
 /* ================= AMBIL TRANSAKSI ================= */
 $t = mysqli_fetch_assoc(
-    mysqli_query($conn, "SELECT * FROM transaksi WHERE id = $id")
+    mysqli_query(
+        $conn,
+        "SELECT id, tanggal, total, pembayaran, kembalian
+         FROM transaksi
+         WHERE id = $id"
+    )
 );
 
 if (!$t) {
-    die("Transaksi tidak ditemukan.");
+    die("Pembayaran berhasil.");
 }
 
-/* ================= AMBIL DETAIL TRANSAKSI ================= */
+/* ================= AMBIL DETAIL PEMBAYARAN ================= */
 $d = mysqli_query(
     $conn,
     "SELECT 
+        m.nama_menu,
         dt.jumlah,
         dt.harga_satuan,
-        dt.subtotal,
-        m.nama_menu
+        dt.subtotal
      FROM detail_transaksi dt
      JOIN menu m ON dt.id_menu = m.id
      WHERE dt.id_transaksi = $id"
 );
+
+$nama_pembeli = $_SESSION['user']['nama'] ?? 'Pembeli';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -46,10 +60,17 @@ $d = mysqli_query(
         body {
             font-family: monospace;
             padding: 20px;
+            font-size: 14px;
         }
 
         h2 {
             text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .info {
+            margin-bottom: 10px;
+            font-size: 13px;
         }
 
         table {
@@ -58,10 +79,18 @@ $d = mysqli_query(
             margin-top: 10px;
         }
 
-        td,
-        th {
+        th,
+        td {
             padding: 4px;
             border-bottom: 1px dashed #000;
+        }
+
+        th {
+            text-align: left;
+        }
+
+        .right {
+            text-align: right;
         }
 
         .total {
@@ -77,47 +106,51 @@ $d = mysqli_query(
 </head>
 
 <body onload="window.print()">
+
     <h2>BAKSO KCN</h2>
 
-    <p>
+    <div class="info">
         Tanggal : <?= htmlspecialchars($t['tanggal']) ?><br>
-        Nota No : #<?= $t['id'] ?>
-    </p>
+        Nota : #<?= $t['id'] ?><br>
+        Pembeli : <?= htmlspecialchars($nama_pembeli) ?>
+    </div>
 
     <table>
         <tr>
             <th>Menu</th>
-            <th>Jml</th>
-            <th>Harga</th>
-            <th>Subtotal</th>
+            <th>Qty</th>
+            <th class="right">Harga</th>
+            <th class="right">Subtotal</th>
         </tr>
 
         <?php while ($r = mysqli_fetch_assoc($d)): ?>
             <tr>
                 <td><?= htmlspecialchars($r['nama_menu']) ?></td>
                 <td><?= $r['jumlah'] ?></td>
-                <td><?= formatRupiah($r['harga_satuan']) ?></td>
-                <td><?= formatRupiah($r['subtotal']) ?></td>
+                <td class="right"><?= formatRupiah($r['harga_satuan']) ?></td>
+                <td class="right"><?= formatRupiah($r['subtotal']) ?></td>
             </tr>
         <?php endwhile; ?>
 
         <tr class="total">
             <td colspan="3">Total</td>
-            <td><?= formatRupiah($t['total']) ?></td>
+            <td class="right"><?= formatRupiah($t['total']) ?></td>
         </tr>
         <tr>
             <td colspan="3">Bayar</td>
-            <td><?= formatRupiah($t['pembayaran']) ?></td>
+            <td class="right"><?= formatRupiah($t['pembayaran']) ?></td>
         </tr>
         <tr>
             <td colspan="3">Kembali</td>
-            <td><?= formatRupiah($t['kembalian']) ?></td>
+            <td class="right"><?= formatRupiah($t['kembalian']) ?></td>
         </tr>
     </table>
 
     <div class="footer">
-        Terima kasih telah berbelanja 🙏
+        Selamat Menikmati 🙏<br>
+        Simpan nota ini sebagai bukti pembayaran
     </div>
+
 </body>
 
 </html>

@@ -37,7 +37,7 @@ $sheet->mergeCells('A1:B1');
 $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
 
-$sheet->setCellValue('A2', 'Toko Dasha');
+$sheet->setCellValue('A2', 'Bakso KCN');
 $sheet->mergeCells('A2:B2');
 $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
@@ -82,4 +82,3 @@ header('Cache-Control: max-age=0');
 $writer = new Xlsx($spreadsheet);
 $writer->save('php://output');
 exit;
-?>
