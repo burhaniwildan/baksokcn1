@@ -9,6 +9,19 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role_id'] != 2) {
 }
 
 $user = $_SESSION['user'];
+
+$id_pembeli = $user['id'];
+
+$qTotalTransaksi = $conn->query("
+    SELECT COUNT(*) AS total_transaksi
+    FROM orders
+    WHERE id_pembeli = $id_pembeli
+      AND status IN ('received','cancelled')
+");
+
+$dataTotal = $qTotalTransaksi->fetch_assoc();
+$totalTransaksi = $dataTotal['total_transaksi'] ?? 0;
+
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -80,6 +93,12 @@ $user = $_SESSION['user'];
             box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15);
         }
 
+        .cursor-pointer:hover {
+            transform: scale(1.02);
+            transition: .2s;
+            opacity: .95;
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 position: relative;
@@ -102,6 +121,7 @@ $user = $_SESSION['user'];
         <hr>
         <a class="active" href="dashboard.php">Dashboard</a>
         <a href="transaksi.php">Transaksi</a>
+        <a href="status_pesanan.php">Status Pesanan</a>
         <a href="logout.php" class="text-danger mt-4">Logout</a>
     </div>
 
@@ -114,66 +134,117 @@ $user = $_SESSION['user'];
             <p class="mb-0">Siap melakukan transaksi hari ini?</p>
         </div>
 
-        <!-- INFO CARD (OPSIONAL, BISA DIISI DATA NANTI) -->
+        <!-- INFO CARD -->
         <div class="row g-4 mb-4">
+
             <div class="col-md-4">
-                <div class="card text-white bg-primary">
-                    <div class="card-body d-flex justify-content-between">
+                <div class="card text-white bg-primary cursor-pointer"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalRiwayat"
+                    style="cursor:pointer;">
+                    <div class="card-body d-flex justify-content-between align-items-center">
                         <div>
-                            <h5>-</h5>
-                            <p>Total Transaksi</p>
+                            <h5>RIWAYAT TRANSAKSI</h5>
+                            <p class="mb-0">Total Transaksi <?= $totalTransaksi ?></p>
                         </div>
-                        <span class="material-icons">receipt</span>
+                        <span class="material-icons fs-2">receipt</span>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-4">
-                <div class="card text-white bg-success">
-                    <div class="card-body d-flex justify-content-between">
+                <div class="card text-white bg-success cursor-pointer"
+                    onclick="window.location.href='transaksi.php'"
+                    style="cursor:pointer;">
+                    <div class="card-body d-flex justify-content-between align-items-center">
                         <div>
-                            <h5>-</h5>
-                            <p>Total Belanja</p>
+                            <h5>Beli Bang!</h5>
+                            <p class="mb-0">Klik Untuk Beli</p>
                         </div>
-                        <span class="material-icons">payments</span>
+                        <span class="material-icons fs-2">payments</span>
                     </div>
                 </div>
             </div>
 
+
             <div class="col-md-4">
-                <div class="card text-white bg-warning">
-                    <div class="card-body d-flex justify-content-between">
+                <div class="card text-white bg-warning cursor-pointer"
+                    onclick="window.open('https://wa.me/62895605957450')"
+                    style="cursor:pointer;">
+                    <div class="card-body d-flex justify-content-between align-items-center">
                         <div>
-                            <h5>-</h5>
-                            <p>Transaksi Terakhir</p>
+                            <h5>Bantuan</h5>
+                            <p class="mb-0">Butuh bantuan?</p>
                         </div>
-                        <span class="material-icons">schedule</span>
+                        <span class="material-icons fs-2">support_agent</span>
                     </div>
                 </div>
             </div>
+
         </div>
 
-        <!-- QUICK ACTION -->
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="card p-4">
-                    <h5>Mulai Transaksi</h5>
-                    <p class="text-muted">Lakukan pembelian produk.</p>
-                    <a href="transaksi.php" class="btn btn-primary">Mulai</a>
-                </div>
-            </div>
+        <script>
+            function loadRiwayat() {
+                const awal = document.getElementById('tgl_awal').value;
+                const akhir = document.getElementById('tgl_akhir').value;
 
-            <div class="col-md-6">
-                <div class="card p-4">
-                    <h5>Bantuan</h5>
-                    <p class="text-muted">Butuh bantuan saat transaksi?</p>
-                    <button class="btn btn-outline-secondary" disabled>Hubungi Admin</button>
+                if (!awal || !akhir) {
+                    alert('Silakan pilih rentang tanggal');
+                    return;
+                }
+
+                fetch(`get_riwayat_transaksi.php?awal=${awal}&akhir=${akhir}`)
+                    .then(res => res.text())
+                    .then(html => {
+                        document.getElementById('riwayatResult').innerHTML = html;
+                    });
+            }
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+<footer>
+    <!-- MODAL RIWAYAT TRANSAKSI -->
+    <div class="modal fade" id="modalRiwayat" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">📜 Riwayat Transaksi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
+
+                <div class="modal-body">
+
+                    <!-- FILTER TANGGAL -->
+                    <div class="row mb-3">
+                        <div class="col-md-5">
+                            <label>Dari Tanggal</label>
+                            <input type="date" id="tgl_awal" class="form-control">
+                        </div>
+                        <div class="col-md-5">
+                            <label>Sampai Tanggal</label>
+                            <input type="date" id="tgl_akhir" class="form-control">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-primary w-100" onclick="loadRiwayat()">
+                                Filter
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- HASIL -->
+                    <div id="riwayatResult">
+                        <div class="text-muted text-center">
+                            Pilih rentang tanggal untuk melihat riwayat transaksi.
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
         </div>
-
     </div>
 
-</body>
+</footer>
 
 </html>

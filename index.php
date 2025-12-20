@@ -65,11 +65,14 @@
           <li class="nav-item">
             <a class="nav-link" href="#galeri">Galeri</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link" href="login.php">Login</a>
+          </li>
           <li class="nav-item me-5">
             <a class="nav-link" href="#kontak">Kontak</a>
           </li>
         </ul>
-      </div>
+      </div> 
     </div>
   </nav>
 
@@ -86,15 +89,7 @@
             Jam Operasional:<br>Senin – Minggu, 07.00 – 21.00 WIB
           </p>
 
-          <!-- Pilihan Login -->
-          <div class="mt-4 d-flex gap-3">
-            <a href="admin/index.php" class="btn btn-primary btn-lg px-4">
-              Login Admin
-            </a>
-            <a href="pembeli/index.php" class="btn btn-outline-light btn-lg px-4">
-              Login Pembeli
-            </a>
-          </div>
+          <!-- Login moved to navbar -->
         </div>
 
         <div class="col-md-6 text-center">

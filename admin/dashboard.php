@@ -10,14 +10,24 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role_id'] != 1) {
 
 $admin = $_SESSION['user'];
 
+// Ensure orders table exists before aggregations
+$conn->query("CREATE TABLE IF NOT EXISTS orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_transaksi INT NOT NULL,
+    id_pembeli INT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
 /* ================= CARD INFO ================= */
-$q_income = mysqli_query($conn, "SELECT SUM(total) AS income FROM transaksi");
+// Only consider transactions that have been confirmed received by buyers
+$q_income = mysqli_query($conn, "SELECT SUM(t.total) AS income FROM transaksi t JOIN orders o ON o.id_transaksi = t.id WHERE o.status = 'received'");
 $total_income = mysqli_fetch_assoc($q_income)['income'] ?? 0;
 
-$q_sold = mysqli_query($conn, "SELECT SUM(jumlah) AS total FROM detail_transaksi");
+$q_sold = mysqli_query($conn, "SELECT SUM(dt.jumlah) AS total FROM detail_transaksi dt JOIN orders o ON o.id_transaksi = dt.id_transaksi WHERE o.status = 'received'");
 $total_sold = mysqli_fetch_assoc($q_sold)['total'] ?? 0;
 
-$q_trans = mysqli_query($conn, "SELECT COUNT(*) AS total FROM transaksi");
+$q_trans = mysqli_query($conn, "SELECT COUNT(*) AS total FROM orders WHERE status = 'received'");
 $total_transaction = mysqli_fetch_assoc($q_trans)['total'] ?? 0;
 
 /* ================= RESTOK ================= */
@@ -142,6 +152,7 @@ while ($row = mysqli_fetch_assoc($q_restock)) {
     <hr class="text-white">
     <a class="active" href="dashboard.php">Dashboard</a>
     <a href="transaksi.php">Transaksi</a>
+    <a href="pesanan.php">Pesanan</a>
     <a href="stok.php">Stok</a>
     <a href="laporan.php">Laporan</a>
     <a href="logout.php" class="text-danger mt-4">Logout</a>

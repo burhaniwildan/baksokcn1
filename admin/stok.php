@@ -57,6 +57,59 @@ if (isset($_POST['tambah_menu'])) {
     exit;
 }
 
+/* ================= EDIT MENU ================= */
+if (isset($_POST['edit_menu'])) {
+    $id = (int)$_POST['id_menu'];
+    $nama = trim($_POST['nama_menu']);
+    $harga = (float)$_POST['harga'];
+    $stok  = (int)$_POST['stok'];
+    $id_kategori = (int)$_POST['id_kategori'];
+
+    if ($nama == '' || $harga <= 0) {
+        $_SESSION['error'] = "Data menu tidak valid.";
+        header("Location: stok.php");
+        exit;
+    }
+
+    // cek nama unik kecuali dirinya sendiri
+    $cek = $conn->query("SELECT id FROM menu WHERE nama_menu='" . $conn->real_escape_string($nama) . "' AND id <> $id");
+    if ($cek->num_rows > 0) {
+        $_SESSION['error'] = "Nama menu sudah ada.";
+        header("Location: stok.php");
+        exit;
+    }
+
+    // ambil gambar saat ini
+    $cur = $conn->query("SELECT gambar FROM menu WHERE id=$id")->fetch_assoc();
+    $current_img = $cur ? $cur['gambar'] : null;
+
+    $gambar = $current_img;
+    if (!empty($_FILES['gambar']['name'])) {
+        $ext = strtolower(pathinfo($_FILES['gambar']['name'], PATHINFO_EXTENSION));
+        $allow = ['jpg', 'jpeg', 'png', 'gif'];
+
+        if (!in_array($ext, $allow)) {
+            $_SESSION['error'] = "Format gambar tidak didukung.";
+            header("Location: stok.php");
+            exit;
+        }
+
+        $gambar = uniqid() . '.' . $ext;
+        move_uploaded_file($_FILES['gambar']['tmp_name'], $upload_dir . $gambar);
+        if ($current_img && file_exists($upload_dir . $current_img)) unlink($upload_dir . $current_img);
+    }
+
+    $stmt = $conn->prepare(
+        "UPDATE menu SET nama_menu=?, harga=?, stok=?, id_kategori=?, gambar=? WHERE id=?"
+    );
+    $stmt->bind_param("sdiisi", $nama, $harga, $stok, $id_kategori, $gambar, $id);
+    $stmt->execute();
+
+    $_SESSION['success'] = "Menu berhasil diubah.";
+    header("Location: stok.php");
+    exit;
+}
+
 /* ================= TAMBAH KATEGORI ================= */
 if (isset($_POST['tambah_kategori'])) {
     $nama = trim($_POST['nama_kategori']);
@@ -231,18 +284,20 @@ $kategori = $conn->query("SELECT * FROM kategori ORDER BY nama_kategori");
 <body>
 
     <!-- SIDEBAR -->
-    <div class="sidebar">
-        <h4>Dashboard Admin</h4>
-        <hr>
-        <a href="dashboard.php">Dashboard</a>
-        <a href="transaksi.php">Transaksi</a>
-        <a href="stok.php" class="active">Stok</a>
-        <a href="laporan.php">Laporan</a>
-        <a href="logout.php" class="text-danger mt-4">Logout</a>
-    </div>
+  <div class="sidebar">
+    <h4 class="text-white">Dashboard Admin</h4>
+    <hr class="text-white">
+    <a href="dashboard.php">Dashboard</a>
+    <a href="transaksi.php">Transaksi</a>
+    <a href="pesanan.php">Pesanan</a>
+    <a class="active"href="stok.php">Stok</a>
+    <a href="laporan.php">Laporan</a>
+    <a href="logout.php" class="text-danger mt-4">Logout</a>
+  </div>
 
     <!-- CONTENT -->
     <div class="main-content">
+        <div id="clientAlertPlaceholder"></div>
         <h3>Manajemen Menu & Stok</h3>
 
         <?php if (isset($_SESSION['error'])): ?>
@@ -287,7 +342,8 @@ $kategori = $conn->query("SELECT * FROM kategori ORDER BY nama_kategori");
                         <td>Rp <?= number_format($m['harga'], 0, ',', '.') ?></td>
                         <td><?= $m['stok'] ?></td>
                         <td>
-                            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#restock<?= $m['id'] ?>">Restock</button>
+                            <button class="btn btn-sm btn-warning me-1" data-bs-toggle="modal" data-bs-target="#edit<?= $m['id'] ?>">Edit</button>
+                            <button class="btn btn-sm btn-success me-1" data-bs-toggle="modal" data-bs-target="#restock<?= $m['id'] ?>">Restock</button>
                             <a href="?hapus=<?= $m['id'] ?>" onclick="return confirm('Hapus menu ini?')" class="btn btn-sm btn-danger">Hapus</a>
                         </td>
                     </tr>
@@ -315,6 +371,43 @@ $kategori = $conn->query("SELECT * FROM kategori ORDER BY nama_kategori");
                             </div>
                         </div>
                     </div>
+
+                    <!-- MODAL EDIT MENU -->
+                    <div class="modal fade" id="edit<?= $m['id'] ?>" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form class="formEditMenu" method="POST" enctype="multipart/form-data">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Edit <?= htmlspecialchars($m['nama_menu']) ?></h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <input type="hidden" name="id_menu" value="<?= $m['id'] ?>">
+                                        <input type="text" name="nama_menu" class="form-control mb-2" placeholder="Nama Menu" value="<?= htmlspecialchars($m['nama_menu']) ?>" required>
+                                        <select name="id_kategori" class="form-select mb-2" required>
+                                            <option value="" disabled>Pilih Kategori</option>
+                                            <?php $kategori->data_seek(0); while ($k = $kategori->fetch_assoc()): ?>
+                                                <option value="<?= $k['id'] ?>" <?= $k['id'] == $m['id_kategori'] ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kategori']) ?></option>
+                                            <?php endwhile; ?>
+                                        </select>
+                                        <input type="number" name="harga" class="form-control mb-2" placeholder="Harga" value="<?= $m['harga'] ?>" required>
+                                        <input type="number" name="stok" class="form-control mb-2" placeholder="Stok" value="<?= $m['stok'] ?>" required>
+                                        <div class="mb-2">
+                                            <?php if ($m['gambar']): ?>
+                                                <img src='../assets/<?= $m['gambar'] ?>' class='produk mb-2'><br>
+                                            <?php endif; ?>
+                                            <input type="file" name="gambar" class="form-control">
+                                            <small class="text-muted">Kosongkan jika tidak ingin mengganti gambar.</small>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="submit" name="edit_menu" class="btn btn-primary">Simpan Perubahan</button>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 <?php endwhile; ?>
             </tbody>
         </table>
@@ -324,15 +417,15 @@ $kategori = $conn->query("SELECT * FROM kategori ORDER BY nama_kategori");
     <div class="modal fade" id="tambahMenu" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="POST" enctype="multipart/form-data">
+                <form id="formTambahMenu" method="POST" enctype="multipart/form-data">
                     <div class="modal-header">
                         <h5 class="modal-title">Tambah Menu</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <input type="text" name="nama_menu" class="form-control mb-2" placeholder="Nama Menu" required>
-                        <select name="id_kategori" class="form-select mb-2" required>
-                            <option disabled selected>Pilih Kategori</option>
+                        <select id="id_kategori" name="id_kategori" class="form-select mb-2" required>
+                            <option value="" disabled selected>Pilih Kategori</option>
                             <?php $kategori->data_seek(0);
                             while ($k = $kategori->fetch_assoc()): ?>
                                 <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kategori']) ?></option>
@@ -354,7 +447,7 @@ $kategori = $conn->query("SELECT * FROM kategori ORDER BY nama_kategori");
     <div class="modal fade" id="tambahKategori" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="POST">
+                <form id="formTambahKategori" method="POST">
                     <div class="modal-header">
                         <h5 class="modal-title">Tambah Kategori</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -371,6 +464,73 @@ $kategori = $conn->query("SELECT * FROM kategori ORDER BY nama_kategori");
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function(){
+        function showClientAlert(msg,type='danger',autoHide=true){
+            var ph = document.getElementById('clientAlertPlaceholder');
+            if(!ph) return; 
+            ph.innerHTML = '<div id="clientAlert" class="alert alert-'+type+' alert-dismissible" role="alert">'+
+                           msg + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+            window.scrollTo({top:0,behavior:'smooth'});
+            if(autoHide) setTimeout(function(){ var a=document.getElementById('clientAlert'); if(a) a.remove(); },4000);
+        }
+
+        var formMenu = document.getElementById('formTambahMenu');
+        if(formMenu){
+            formMenu.addEventListener('submit', function(e){
+                var nama = formMenu.querySelector('[name="nama_menu"]').value.trim();
+                var kategori = formMenu.querySelector('[name="id_kategori"]').value;
+                var harga = parseFloat(formMenu.querySelector('[name="harga"]').value);
+                var stok = parseInt(formMenu.querySelector('[name="stok"]').value,10);
+
+                if(!nama){ e.preventDefault(); showClientAlert('Nama menu wajib diisi.'); return; }
+                if(!kategori){ e.preventDefault(); showClientAlert('Pilih kategori.'); return; }
+                if(isNaN(harga) || harga <= 0){ e.preventDefault(); showClientAlert('Harga harus lebih besar dari 0.'); return; }
+                if(isNaN(stok) || stok < 0){ e.preventDefault(); showClientAlert('Stok harus berupa angka nol atau lebih.'); return; }
+
+                var fileInput = formMenu.querySelector('[name="gambar"]');
+                if(fileInput && fileInput.files.length){
+                    var allowed = ['jpg','jpeg','png','gif'];
+                    var ext = fileInput.files[0].name.split('.').pop().toLowerCase();
+                    if(allowed.indexOf(ext) === -1){ e.preventDefault(); showClientAlert('Format gambar tidak didukung.'); return; }
+                }
+            });
+        }
+
+        // Edit forms validation (multiple per row)
+        var editForms = document.querySelectorAll('.formEditMenu');
+        if(editForms && editForms.length){
+            editForms.forEach(function(form){
+                form.addEventListener('submit', function(e){
+                    var nama = form.querySelector('[name="nama_menu"]').value.trim();
+                    var kategori = form.querySelector('[name="id_kategori"]').value;
+                    var harga = parseFloat(form.querySelector('[name="harga"]').value);
+                    var stok = parseInt(form.querySelector('[name="stok"]').value,10);
+
+                    if(!nama){ e.preventDefault(); showClientAlert('Nama menu wajib diisi.'); return; }
+                    if(!kategori){ e.preventDefault(); showClientAlert('Pilih kategori.'); return; }
+                    if(isNaN(harga) || harga <= 0){ e.preventDefault(); showClientAlert('Harga harus lebih besar dari 0.'); return; }
+                    if(isNaN(stok) || stok < 0){ e.preventDefault(); showClientAlert('Stok harus berupa angka nol atau lebih.'); return; }
+
+                    var fileInput = form.querySelector('[name="gambar"]');
+                    if(fileInput && fileInput.files.length){
+                        var allowed = ['jpg','jpeg','png','gif'];
+                        var ext = fileInput.files[0].name.split('.').pop().toLowerCase();
+                        if(allowed.indexOf(ext) === -1){ e.preventDefault(); showClientAlert('Format gambar tidak didukung.'); return; }
+                    }
+                });
+            });
+        }
+
+        var formKategori = document.getElementById('formTambahKategori');
+        if(formKategori){
+            formKategori.addEventListener('submit', function(e){
+                var nama = formKategori.querySelector('[name="nama_kategori"]') .value.trim();
+                if(!nama){ e.preventDefault(); showClientAlert('Nama kategori wajib diisi.'); return; }
+            });
+        }
+    })();
+    </script>
 </body>
 
 </html>

@@ -98,7 +98,7 @@ if (isset($_POST['update_id'], $_POST['jumlah_baru'])) {
 }
 
 /* ================= SIMPAN TRANSAKSI ================= */
-if (isset($_POST['bayar'])) {
+if (isset($_POST['pesan'])) {
 
     if (empty($_SESSION['cart'])) {
         $_SESSION['error'] = "Keranjang kosong.";
@@ -107,16 +107,11 @@ if (isset($_POST['bayar'])) {
     }
 
     $tanggal    = date('Y-m-d');
-    $pembayaran = (float) $_POST['pembayaran'];
     $total      = array_sum(array_column($_SESSION['cart'], 'subtotal'));
-    $kembalian  = $pembayaran - $total;
+    $pembayaran = $total; // otomatis sama dengan total
+    $kembalian  = 0;
 
-    if ($kembalian < 0) {
-        $_SESSION['error'] = "Pembayaran kurang!";
-        header("Location: transaksi.php");
-        exit;
-    }
-
+    /* === SIMPAN KE TABEL TRANSAKSI === */
     $stmt = $conn->prepare(
         "INSERT INTO transaksi (tanggal, total, pembayaran, kembalian)
          VALUES (?, ?, ?, ?)"
@@ -125,18 +120,19 @@ if (isset($_POST['bayar'])) {
     $stmt->execute();
     $id_transaksi = $stmt->insert_id;
 
+    /* === SIMPAN DETAIL & UPDATE STOK === */
     foreach ($_SESSION['cart'] as $id_menu => $item) {
 
         $conn->query(
             "INSERT INTO detail_transaksi
-            (id_transaksi, id_menu, jumlah, harga_satuan, subtotal)
-            VALUES (
+             (id_transaksi, id_menu, jumlah, harga_satuan, subtotal)
+             VALUES (
                 $id_transaksi,
                 $id_menu,
                 {$item['jumlah']},
                 {$item['harga']},
                 {$item['subtotal']}
-            )"
+             )"
         );
 
         $conn->query(
@@ -146,6 +142,17 @@ if (isset($_POST['bayar'])) {
         );
     }
 
+    /* === SIMPAN KE TABEL ORDERS (TANPA VERIFIKASI) === */
+    $id_pembeli = $_SESSION['user']['id'];
+
+    $stmt2 = $conn->prepare(
+        "INSERT INTO orders (id_transaksi, id_pembeli, status)
+         VALUES (?, ?, 'pending')"
+    );
+    $stmt2->bind_param("ii", $id_transaksi, $id_pembeli);
+    $stmt2->execute();
+
+    /* === STRUK NOTA === */
     $_SESSION['last_receipt'] = [
         'id_transaksi' => $id_transaksi,
         'total'        => $total,
@@ -158,6 +165,7 @@ if (isset($_POST['bayar'])) {
     header("Location: transaksi.php?done=1");
     exit;
 }
+
 
 /* ================= DATA MENU ================= */
 $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
@@ -181,12 +189,21 @@ $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
     </style>
 </head>
 
+<script>
+    function konfirmasiPesan() {
+        return confirm(
+            "Apakah Anda yakin ingin memesan?\n\n" +
+            "Pesanan akan langsung diproses."
+        );
+    }
+</script>
+
+
 <body class="p-4">
     <div class="container-fluid">
         <a href="dashboard.php" class="btn btn-danger mb-3 w-25">Kembali</a>
 
         <div class="row">
-
             <!-- MENU -->
             <div class="col-lg-8">
                 <form class="mb-3">
@@ -264,14 +281,11 @@ $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
                                     </tr>
                                 <?php endforeach; ?>
                             </table>
-
-                            <b>Total: <?= rupiah($total) ?></b>
-
-                            <form method="post" class="mt-2">
-                                <input type="number" name="pembayaran"
-                                    min="<?= $total ?>"
-                                    class="form-control mb-2" required>
-                                <button name="bayar" class="btn btn-success w-100">Bayar</button>
+                            <form method="post" class="mt-2" onsubmit="return konfirmasiPesan();">
+                                <input type="hidden" name="pesan" value="1">
+                                <button type="submit" class="btn btn-success w-100">
+                                    🛒 Pesan
+                                </button>
                             </form>
                         <?php else: ?>
                             <p class="text-muted">Keranjang kosong</p>
