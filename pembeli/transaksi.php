@@ -144,12 +144,13 @@ if (isset($_POST['pesan'])) {
 
     /* === SIMPAN KE TABEL ORDERS (TANPA VERIFIKASI) === */
     $id_pembeli = $_SESSION['user']['id'];
+    $jenis_pesanan = $_POST['jenis_pesanan'] ?? 'dine_in';
 
     $stmt2 = $conn->prepare(
-        "INSERT INTO orders (id_transaksi, id_pembeli, status)
-         VALUES (?, ?, 'pending')"
+        "INSERT INTO orders (id_transaksi, id_pembeli, jenis_pesanan, status)
+     VALUES (?, ?, ?, 'pending')"
     );
-    $stmt2->bind_param("ii", $id_transaksi, $id_pembeli);
+    $stmt2->bind_param("iis", $id_transaksi, $id_pembeli, $jenis_pesanan);
     $stmt2->execute();
 
     /* === STRUK NOTA === */
@@ -195,8 +196,14 @@ $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
             "Apakah Anda yakin ingin memesan?\n\n" +
             "Pesanan akan langsung diproses."
         );
+    };
+
+    function toggleDelivery(isDelivery) {
+        document.getElementById('deliveryOption')
+            .classList.toggle('d-none', !isDelivery);
     }
 </script>
+
 
 
 <body class="p-4">
@@ -281,12 +288,11 @@ $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
                                     </tr>
                                 <?php endforeach; ?>
                             </table>
-                            <form method="post" class="mt-2" onsubmit="return konfirmasiPesan();">
-                                <input type="hidden" name="pesan" value="1">
-                                <button type="submit" class="btn btn-success w-100">
-                                    🛒 Pesan
-                                </button>
-                            </form>
+                            <button class="btn btn-success w-100"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalPesan">
+                                🛒 Pesan
+                            </button>
                         <?php else: ?>
                             <p class="text-muted">Keranjang kosong</p>
                         <?php endif; ?>
@@ -319,6 +325,65 @@ $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
         </div>
     <?php unset($_SESSION['last_receipt']);
     endif; ?>
+
+    <!-- MODAL PILIH JENIS PESANAN -->
+    <div class="modal fade" id="modalPesan" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Konfirmasi Pesanan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <input type="hidden" name="pesan" value="1">
+
+                    <label class="form-label fw-bold">Jenis Pesanan</label>
+
+                    <div class="form-check">
+                        <input class="form-check-input"
+                            type="radio"
+                            name="jenis_pesanan"
+                            value="dine_in"
+                            id="dinein"
+                            checked>
+                        <label class="form-check-label" for="dinein">
+                            🍽️ Makan di Tempat
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input"
+                            type="radio"
+                            name="jenis_pesanan"
+                            value="delivery"
+                            id="delivery"
+                            onclick="toggleDelivery(true)">
+                        <label class="form-check-label" for="delivery">
+                            🛵 Delivery
+                        </label>
+                    </div>
+
+                    <!-- TEMPAT KOSONG UNTUK PENGEMBANGAN -->
+                    <div id="deliveryOption" class="border rounded p-3 d-none">
+                        <p class="text-muted mb-0">
+                            ⚠️ Opsi pembayaran delivery akan ditambahkan di versi selanjutnya.
+                        </p>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button class="btn btn-success">Lanjutkan Pesanan</button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 
