@@ -154,6 +154,7 @@ while ($row = mysqli_fetch_assoc($q_restock)) {
     <a href="transaksi.php">Transaksi</a>
     <a href="pesanan.php">Pesanan</a>
     <a href="stok.php">Stok</a>
+    <a href="metode_pembayaran.php">Metode Pembayaran</a>
     <a href="laporan.php">Laporan</a>
     <a href="logout.php" class="text-danger mt-4">Logout</a>
   </div>

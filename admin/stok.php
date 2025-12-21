@@ -284,16 +284,17 @@ $kategori = $conn->query("SELECT * FROM kategori ORDER BY nama_kategori");
 <body>
 
     <!-- SIDEBAR -->
-  <div class="sidebar">
-    <h4 class="text-white">Dashboard Admin</h4>
-    <hr class="text-white">
-    <a href="dashboard.php">Dashboard</a>
-    <a href="transaksi.php">Transaksi</a>
-    <a href="pesanan.php">Pesanan</a>
-    <a class="active"href="stok.php">Stok</a>
-    <a href="laporan.php">Laporan</a>
-    <a href="logout.php" class="text-danger mt-4">Logout</a>
-  </div>
+    <div class="sidebar">
+        <h4 class="text-white">Dashboard Admin</h4>
+        <hr class="text-white">
+        <a href="dashboard.php">Dashboard</a>
+        <a href="transaksi.php">Transaksi</a>
+        <a href="pesanan.php">Pesanan</a>
+        <a class="active" href="stok.php">Stok</a>
+        <a href="metode_pembayaran.php">Metode Pembayaran</a>
+        <a href="laporan.php">Laporan</a>
+        <a href="logout.php" class="text-danger mt-4">Logout</a>
+    </div>
 
     <!-- CONTENT -->
     <div class="main-content">
@@ -386,7 +387,8 @@ $kategori = $conn->query("SELECT * FROM kategori ORDER BY nama_kategori");
                                         <input type="text" name="nama_menu" class="form-control mb-2" placeholder="Nama Menu" value="<?= htmlspecialchars($m['nama_menu']) ?>" required>
                                         <select name="id_kategori" class="form-select mb-2" required>
                                             <option value="" disabled>Pilih Kategori</option>
-                                            <?php $kategori->data_seek(0); while ($k = $kategori->fetch_assoc()): ?>
+                                            <?php $kategori->data_seek(0);
+                                            while ($k = $kategori->fetch_assoc()): ?>
                                                 <option value="<?= $k['id'] ?>" <?= $k['id'] == $m['id_kategori'] ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kategori']) ?></option>
                                             <?php endwhile; ?>
                                         </select>
@@ -465,71 +467,121 @@ $kategori = $conn->query("SELECT * FROM kategori ORDER BY nama_kategori");
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    (function(){
-        function showClientAlert(msg,type='danger',autoHide=true){
-            var ph = document.getElementById('clientAlertPlaceholder');
-            if(!ph) return; 
-            ph.innerHTML = '<div id="clientAlert" class="alert alert-'+type+' alert-dismissible" role="alert">'+
-                           msg + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
-            window.scrollTo({top:0,behavior:'smooth'});
-            if(autoHide) setTimeout(function(){ var a=document.getElementById('clientAlert'); if(a) a.remove(); },4000);
-        }
+        (function() {
+            function showClientAlert(msg, type = 'danger', autoHide = true) {
+                var ph = document.getElementById('clientAlertPlaceholder');
+                if (!ph) return;
+                ph.innerHTML = '<div id="clientAlert" class="alert alert-' + type + ' alert-dismissible" role="alert">' +
+                    msg + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+                if (autoHide) setTimeout(function() {
+                    var a = document.getElementById('clientAlert');
+                    if (a) a.remove();
+                }, 4000);
+            }
 
-        var formMenu = document.getElementById('formTambahMenu');
-        if(formMenu){
-            formMenu.addEventListener('submit', function(e){
-                var nama = formMenu.querySelector('[name="nama_menu"]').value.trim();
-                var kategori = formMenu.querySelector('[name="id_kategori"]').value;
-                var harga = parseFloat(formMenu.querySelector('[name="harga"]').value);
-                var stok = parseInt(formMenu.querySelector('[name="stok"]').value,10);
+            var formMenu = document.getElementById('formTambahMenu');
+            if (formMenu) {
+                formMenu.addEventListener('submit', function(e) {
+                    var nama = formMenu.querySelector('[name="nama_menu"]').value.trim();
+                    var kategori = formMenu.querySelector('[name="id_kategori"]').value;
+                    var harga = parseFloat(formMenu.querySelector('[name="harga"]').value);
+                    var stok = parseInt(formMenu.querySelector('[name="stok"]').value, 10);
 
-                if(!nama){ e.preventDefault(); showClientAlert('Nama menu wajib diisi.'); return; }
-                if(!kategori){ e.preventDefault(); showClientAlert('Pilih kategori.'); return; }
-                if(isNaN(harga) || harga <= 0){ e.preventDefault(); showClientAlert('Harga harus lebih besar dari 0.'); return; }
-                if(isNaN(stok) || stok < 0){ e.preventDefault(); showClientAlert('Stok harus berupa angka nol atau lebih.'); return; }
+                    if (!nama) {
+                        e.preventDefault();
+                        showClientAlert('Nama menu wajib diisi.');
+                        return;
+                    }
+                    if (!kategori) {
+                        e.preventDefault();
+                        showClientAlert('Pilih kategori.');
+                        return;
+                    }
+                    if (isNaN(harga) || harga <= 0) {
+                        e.preventDefault();
+                        showClientAlert('Harga harus lebih besar dari 0.');
+                        return;
+                    }
+                    if (isNaN(stok) || stok < 0) {
+                        e.preventDefault();
+                        showClientAlert('Stok harus berupa angka nol atau lebih.');
+                        return;
+                    }
 
-                var fileInput = formMenu.querySelector('[name="gambar"]');
-                if(fileInput && fileInput.files.length){
-                    var allowed = ['jpg','jpeg','png','gif'];
-                    var ext = fileInput.files[0].name.split('.').pop().toLowerCase();
-                    if(allowed.indexOf(ext) === -1){ e.preventDefault(); showClientAlert('Format gambar tidak didukung.'); return; }
-                }
-            });
-        }
-
-        // Edit forms validation (multiple per row)
-        var editForms = document.querySelectorAll('.formEditMenu');
-        if(editForms && editForms.length){
-            editForms.forEach(function(form){
-                form.addEventListener('submit', function(e){
-                    var nama = form.querySelector('[name="nama_menu"]').value.trim();
-                    var kategori = form.querySelector('[name="id_kategori"]').value;
-                    var harga = parseFloat(form.querySelector('[name="harga"]').value);
-                    var stok = parseInt(form.querySelector('[name="stok"]').value,10);
-
-                    if(!nama){ e.preventDefault(); showClientAlert('Nama menu wajib diisi.'); return; }
-                    if(!kategori){ e.preventDefault(); showClientAlert('Pilih kategori.'); return; }
-                    if(isNaN(harga) || harga <= 0){ e.preventDefault(); showClientAlert('Harga harus lebih besar dari 0.'); return; }
-                    if(isNaN(stok) || stok < 0){ e.preventDefault(); showClientAlert('Stok harus berupa angka nol atau lebih.'); return; }
-
-                    var fileInput = form.querySelector('[name="gambar"]');
-                    if(fileInput && fileInput.files.length){
-                        var allowed = ['jpg','jpeg','png','gif'];
+                    var fileInput = formMenu.querySelector('[name="gambar"]');
+                    if (fileInput && fileInput.files.length) {
+                        var allowed = ['jpg', 'jpeg', 'png', 'gif'];
                         var ext = fileInput.files[0].name.split('.').pop().toLowerCase();
-                        if(allowed.indexOf(ext) === -1){ e.preventDefault(); showClientAlert('Format gambar tidak didukung.'); return; }
+                        if (allowed.indexOf(ext) === -1) {
+                            e.preventDefault();
+                            showClientAlert('Format gambar tidak didukung.');
+                            return;
+                        }
                     }
                 });
-            });
-        }
+            }
 
-        var formKategori = document.getElementById('formTambahKategori');
-        if(formKategori){
-            formKategori.addEventListener('submit', function(e){
-                var nama = formKategori.querySelector('[name="nama_kategori"]') .value.trim();
-                if(!nama){ e.preventDefault(); showClientAlert('Nama kategori wajib diisi.'); return; }
-            });
-        }
-    })();
+            // Edit forms validation (multiple per row)
+            var editForms = document.querySelectorAll('.formEditMenu');
+            if (editForms && editForms.length) {
+                editForms.forEach(function(form) {
+                    form.addEventListener('submit', function(e) {
+                        var nama = form.querySelector('[name="nama_menu"]').value.trim();
+                        var kategori = form.querySelector('[name="id_kategori"]').value;
+                        var harga = parseFloat(form.querySelector('[name="harga"]').value);
+                        var stok = parseInt(form.querySelector('[name="stok"]').value, 10);
+
+                        if (!nama) {
+                            e.preventDefault();
+                            showClientAlert('Nama menu wajib diisi.');
+                            return;
+                        }
+                        if (!kategori) {
+                            e.preventDefault();
+                            showClientAlert('Pilih kategori.');
+                            return;
+                        }
+                        if (isNaN(harga) || harga <= 0) {
+                            e.preventDefault();
+                            showClientAlert('Harga harus lebih besar dari 0.');
+                            return;
+                        }
+                        if (isNaN(stok) || stok < 0) {
+                            e.preventDefault();
+                            showClientAlert('Stok harus berupa angka nol atau lebih.');
+                            return;
+                        }
+
+                        var fileInput = form.querySelector('[name="gambar"]');
+                        if (fileInput && fileInput.files.length) {
+                            var allowed = ['jpg', 'jpeg', 'png', 'gif'];
+                            var ext = fileInput.files[0].name.split('.').pop().toLowerCase();
+                            if (allowed.indexOf(ext) === -1) {
+                                e.preventDefault();
+                                showClientAlert('Format gambar tidak didukung.');
+                                return;
+                            }
+                        }
+                    });
+                });
+            }
+
+            var formKategori = document.getElementById('formTambahKategori');
+            if (formKategori) {
+                formKategori.addEventListener('submit', function(e) {
+                    var nama = formKategori.querySelector('[name="nama_kategori"]').value.trim();
+                    if (!nama) {
+                        e.preventDefault();
+                        showClientAlert('Nama kategori wajib diisi.');
+                        return;
+                    }
+                });
+            }
+        })();
     </script>
 </body>
 

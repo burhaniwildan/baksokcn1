@@ -77,185 +77,229 @@ $open_orders = (int) (
 ?>
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <title>Manajemen Pesanan</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background:#f1f3f5; font-family:'Segoe UI',sans-serif; }
+        body {
+            background: #f1f3f5;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
         .sidebar {
-            position:fixed; top:0; left:0; width:16.666667%; height:100%;
-            background:rgb(34,53,71); padding:25px 15px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 16.666667%;
+            height: 100%;
+            background: rgb(34, 53, 71);
+            padding: 25px 15px;
         }
-        .sidebar h4,.sidebar hr { color:#fff; }
+
+        .sidebar h4,
+        .sidebar hr {
+            color: #fff;
+        }
+
         .sidebar a {
-            color:#adb5bd; text-decoration:none; display:block;
-            padding:8px 12px; border-radius:5px; margin-bottom:6px;
+            color: #adb5bd;
+            text-decoration: none;
+            display: block;
+            padding: 8px 12px;
+            border-radius: 5px;
+            margin-bottom: 6px;
         }
-        .sidebar a:hover,.sidebar a.active {
-            background:rgb(95,168,241); color:#fff;
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: rgb(95, 168, 241);
+            color: #fff;
         }
-        .main-content { margin-left:16.666667%; padding:1.5rem; }
+
+        .main-content {
+            margin-left: 16.666667%;
+            padding: 1.5rem;
+        }
+
         .welcome-banner {
-            background:#0d6efd; color:#fff; padding:1.5rem;
-            border-radius:.5rem; margin-bottom:1.5rem;
-            box-shadow:5px 5px 20px #aaa;
+            background: #0d6efd;
+            color: #fff;
+            padding: 1.5rem;
+            border-radius: .5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 5px 5px 20px #aaa;
         }
-        .card { border-radius:.5rem; box-shadow:0 .5rem 1rem rgba(0,0,0,.15); }
+
+        .card {
+            border-radius: .5rem;
+            box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15);
+        }
     </style>
 </head>
+
 <body>
 
-<div class="sidebar">
-    <h4>Dashboard Admin</h4>
-    <hr>
-    <a href="dashboard.php">Dashboard</a>
-    <a href="transaksi.php">Transaksi</a>
-    <a class="active" href="pesanan.php">Pesanan</a>
-    <a href="stok.php">Stok</a>
-    <a href="laporan.php">Laporan</a>
-    <a href="logout.php" class="text-danger mt-4">Logout</a>
-</div>
-
-<div class="main-content">
-    <div class="welcome-banner">
-        <h5>Selamat datang, <strong><?= htmlspecialchars($_SESSION['user']['nama']) ?></strong></h5>
-        <p class="mb-0">Kelola pesanan pembeli.</p>
+    <div class="sidebar">
+        <h4>Dashboard Admin</h4>
+        <hr>
+        <a href="dashboard.php">Dashboard</a>
+        <a href="transaksi.php">Transaksi</a>
+        <a class="active" href="pesanan.php">Pesanan</a>
+        <a href="stok.php">Stok</a>
+        <a href="metode_pembayaran.php">Metode Pembayaran</a>
+        <a href="laporan.php">Laporan</a>
+        <a href="logout.php" class="text-danger mt-4">Logout</a>
     </div>
 
-    <h3>Manajemen Pesanan</h3>
+    <div class="main-content">
+        <div class="welcome-banner">
+            <h5>Selamat datang, <strong><?= htmlspecialchars($_SESSION['user']['nama']) ?></strong></h5>
+            <p class="mb-0">Kelola pesanan pembeli.</p>
+        </div>
 
-    <div class="row g-3 mb-3">
-        <div class="col-md-3">
-            <div class="card p-3">
-                <h6>Pesanan Berjalan</h6>
-                <h4><?= $open_orders ?></h4>
+        <h3>Manajemen Pesanan</h3>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <div class="card p-3">
+                    <h6>Pesanan Berjalan</h6>
+                    <h4><?= $open_orders ?></h4>
+                </div>
             </div>
         </div>
-    </div>
 
-    <?php if (isset($_SESSION['error'])): ?>
-        <div class="alert alert-danger"><?= $_SESSION['error']; unset($_SESSION['error']); ?></div>
-    <?php endif; ?>
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="alert alert-danger"><?= $_SESSION['error'];
+                                            unset($_SESSION['error']); ?></div>
+        <?php endif; ?>
 
-    <?php if (isset($_SESSION['success'])): ?>
-        <div class="alert alert-success"><?= $_SESSION['success']; unset($_SESSION['success']); ?></div>
-    <?php endif; ?>
+        <?php if (isset($_SESSION['success'])): ?>
+            <div class="alert alert-success"><?= $_SESSION['success'];
+                                                unset($_SESSION['success']); ?></div>
+        <?php endif; ?>
 
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nota</th>
-                <th>Pembeli</th>
-                <th>Tanggal</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php while ($o = $orders->fetch_assoc()): ?>
-            <tr>
-                <td><?= $o['id'] ?></td>
-                <td>#<?= $o['id_transaksi'] ?></td>
-                <td><?= htmlspecialchars($o['pembeli_nama'] ?? $o['pembeli_username'] ?? 'Guest') ?></td>
-                <td><?= htmlspecialchars($o['tanggal']) ?></td>
-                <td>Rp <?= number_format($o['total'],0,',','.') ?></td>
-                <td>
-                    <span class="badge bg-<?= $o['status']==='pending'?'warning':($o['status']==='processing'?'primary':'success') ?>">
-                        <?= htmlspecialchars($o['status']) ?>
-                    </span>
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-info"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#details<?= $o['id'] ?>">
-                        Detail
-                    </button>
-                    <button class="btn btn-sm btn-secondary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#status<?= $o['id'] ?>">
-                        Ubah Status
-                    </button>
-                </td>
-            </tr>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nota</th>
+                    <th>Pembeli</th>
+                    <th>Tanggal</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while ($o = $orders->fetch_assoc()): ?>
+                    <tr>
+                        <td><?= $o['id'] ?></td>
+                        <td>#<?= $o['id_transaksi'] ?></td>
+                        <td><?= htmlspecialchars($o['pembeli_nama'] ?? $o['pembeli_username'] ?? 'Guest') ?></td>
+                        <td><?= htmlspecialchars($o['tanggal']) ?></td>
+                        <td>Rp <?= number_format($o['total'], 0, ',', '.') ?></td>
+                        <td>
+                            <span class="badge bg-<?= $o['status'] === 'pending' ? 'warning' : ($o['status'] === 'processing' ? 'primary' : 'success') ?>">
+                                <?= htmlspecialchars($o['status']) ?>
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#details<?= $o['id'] ?>">
+                                Detail
+                            </button>
+                            <button class="btn btn-sm btn-secondary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#status<?= $o['id'] ?>">
+                                Ubah Status
+                            </button>
+                        </td>
+                    </tr>
 
-            <tr>
-                <td colspan="7" class="p-0">
-                    <div class="collapse" id="details<?= $o['id'] ?>">
-                        <div class="p-3 bg-white border-top">
-                            <?php
-                            $details = $conn->query(
-                                "SELECT m.nama_menu, dt.jumlah, dt.harga_satuan, dt.subtotal
+                    <tr>
+                        <td colspan="7" class="p-0">
+                            <div class="collapse" id="details<?= $o['id'] ?>">
+                                <div class="p-3 bg-white border-top">
+                                    <?php
+                                    $details = $conn->query(
+                                        "SELECT m.nama_menu, dt.jumlah, dt.harga_satuan, dt.subtotal
                                  FROM detail_transaksi dt
                                  JOIN menu m ON dt.id_menu = m.id
                                  WHERE dt.id_transaksi = " . (int)$o['id_transaksi']
-                            );
-                            ?>
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr><th>Menu</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr>
-                                </thead>
-                                <tbody>
-                                <?php while ($d = $details->fetch_assoc()): ?>
-                                    <tr>
-                                        <td><?= htmlspecialchars($d['nama_menu']) ?></td>
-                                        <td><?= $d['jumlah'] ?></td>
-                                        <td>Rp <?= number_format($d['harga_satuan'],0,',','.') ?></td>
-                                        <td>Rp <?= number_format($d['subtotal'],0,',','.') ?></td>
-                                    </tr>
-                                <?php endwhile; ?>
-                                </tbody>
-                            </table>
+                                    );
+                                    ?>
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Menu</th>
+                                                <th>Qty</th>
+                                                <th>Harga</th>
+                                                <th>Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php while ($d = $details->fetch_assoc()): ?>
+                                                <tr>
+                                                    <td><?= htmlspecialchars($d['nama_menu']) ?></td>
+                                                    <td><?= $d['jumlah'] ?></td>
+                                                    <td>Rp <?= number_format($d['harga_satuan'], 0, ',', '.') ?></td>
+                                                    <td>Rp <?= number_format($d['subtotal'], 0, ',', '.') ?></td>
+                                                </tr>
+                                            <?php endwhile; ?>
+                                        </tbody>
+                                    </table>
 
-                            <p><strong>Total:</strong> Rp <?= number_format($o['total'],0,',','.') ?></p>
-                            <p><strong>Pembayaran:</strong> Rp <?= number_format($o['pembayaran'],0,',','.') ?>
-                               | <strong>Kembali:</strong> Rp <?= number_format($o['kembalian'],0,',','.') ?></p>
+                                    <p><strong>Total:</strong> Rp <?= number_format($o['total'], 0, ',', '.') ?></p>
+                                    <p><strong>Pembayaran:</strong> Rp <?= number_format($o['pembayaran'], 0, ',', '.') ?>
+                                        | <strong>Kembali:</strong> Rp <?= number_format($o['kembalian'], 0, ',', '.') ?></p>
 
-                            <?php if (!empty($o['payment_proof'])): ?>
-                                <?php $proof = '../uploads/payments/' . basename($o['payment_proof']); ?>
-                                <img src="<?= $proof ?>" class="img-fluid" style="max-width:300px">
-                            <?php endif; ?>
+                                    <?php if (!empty($o['payment_proof'])): ?>
+                                        <?php $proof = '../uploads/payments/' . basename($o['payment_proof']); ?>
+                                        <img src="<?= $proof ?>" class="img-fluid" style="max-width:300px">
+                                    <?php endif; ?>
 
-                            <a href="cetak_nota.php?id=<?= $o['id_transaksi'] ?>" target="_blank"
-                               class="btn btn-sm btn-light mt-2">Cetak Nota</a>
+                                    <a href="cetak_nota.php?id=<?= $o['id_transaksi'] ?>" target="_blank"
+                                        class="btn btn-sm btn-light mt-2">Cetak Nota</a>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- MODAL STATUS -->
+                    <div class="modal fade" id="status<?= $o['id'] ?>">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="post">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Ubah Status Pesanan</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
+                                        <select name="status" class="form-select">
+                                            <option value="pending" <?= $o['status'] === 'pending' ? 'selected' : '' ?>>pending</option>
+                                            <option value="processing" <?= $o['status'] === 'processing' ? 'selected' : '' ?>>processing</option>
+                                            <option value="completed" <?= $o['status'] === 'completed' ? 'selected' : '' ?>>completed</option>
+                                            <option value="cancelled" <?= $o['status'] === 'cancelled' ? 'selected' : '' ?>>cancelled</option>
+                                        </select>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button name="change_status" class="btn btn-primary">Simpan</button>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                </td>
-            </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+    </div>
 
-            <!-- MODAL STATUS -->
-            <div class="modal fade" id="status<?= $o['id'] ?>">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <form method="post">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Ubah Status Pesanan</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
-                                <select name="status" class="form-select">
-                                    <option value="pending" <?= $o['status']==='pending'?'selected':'' ?>>pending</option>
-                                    <option value="processing" <?= $o['status']==='processing'?'selected':'' ?>>processing</option>
-                                    <option value="completed" <?= $o['status']==='completed'?'selected':'' ?>>completed</option>
-                                    <option value="cancelled" <?= $o['status']==='cancelled'?'selected':'' ?>>cancelled</option>
-                                </select>
-                            </div>
-                            <div class="modal-footer">
-                                <button name="change_status" class="btn btn-primary">Simpan</button>
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        <?php endwhile; ?>
-        </tbody>
-    </table>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>
