@@ -100,6 +100,24 @@ if (isset($_POST['update_id'], $_POST['jumlah_baru'])) {
 /* ================= SIMPAN TRANSAKSI ================= */
 if (isset($_POST['pesan'])) {
 
+    // pastikan benar-benar dari modal
+    if (!isset($_POST['jenis_pesanan'])) {
+        $_SESSION['error'] = "Jenis pesanan belum dipilih.";
+        header("Location: transaksi.php");
+        exit;
+    }
+
+    $jenis_pesanan = $_POST['jenis_pesanan'];
+
+    // validasi metode pembayaran khusus delivery (nanti dipakai)
+    if ($jenis_pesanan === 'delivery') {
+        if (empty($_POST['metode_pembayaran'])) {
+            $_SESSION['error'] = "Metode pembayaran wajib dipilih untuk delivery.";
+            header("Location: transaksi.php");
+            exit;
+        }
+    }
+
     if (empty($_SESSION['cart'])) {
         $_SESSION['error'] = "Keranjang kosong.";
         header("Location: transaksi.php");
@@ -170,6 +188,16 @@ if (isset($_POST['pesan'])) {
 
 /* ================= DATA MENU ================= */
 $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
+
+$metode_pembayaran = mysqli_query(
+    $conn,
+    "SELECT id, nama_metode, keterangan, gambar_qr 
+     FROM metode_pembayaran 
+     WHERE status = 'aktif'
+     ORDER BY created_at ASC"
+);
+
+
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -183,9 +211,45 @@ $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
             background: #f8f9fa;
         }
 
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 16.666667%;
+            height: 100%;
+            background: rgb(34, 53, 71);
+            padding: 25px 15px;
+        }
+
+        .sidebar h4,
+        .sidebar hr {
+            color: #fff;
+        }
+
+        .sidebar a {
+            color: #adb5bd;
+            text-decoration: none;
+            display: block;
+            padding: 8px 12px;
+            border-radius: 5px;
+            margin-bottom: 6px;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: rgb(95, 168, 241);
+            color: #fff;
+        }
+
         .card img {
             height: 120px;
             object-fit: contain;
+        }
+
+
+        .main-content {
+            margin-left: 16.666667%;
+            padding: 2.5rem 1.5rem 1.5rem;
         }
     </style>
 </head>
@@ -197,19 +261,34 @@ $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
             "Pesanan akan langsung diproses."
         );
     };
+</script>
 
+<script>
     function toggleDelivery(isDelivery) {
-        document.getElementById('deliveryOption')
-            .classList.toggle('d-none', !isDelivery);
+        const box = document.getElementById('deliveryOption');
+        const radios = box.querySelectorAll('input[name="metode_pembayaran"]');
+
+        if (isDelivery) {
+            box.classList.remove('d-none');
+        } else {
+            box.classList.add('d-none');
+            radios.forEach(r => r.checked = false);
+        }
     }
 </script>
 
 
 
 <body class="p-4">
-    <div class="container-fluid">
-        <a href="dashboard.php" class="btn btn-danger mb-3 w-25">Kembali</a>
-
+    <div class="sidebar">
+        <h4>Dashboard Pembeli</h4>
+        <hr>
+        <a href="dashboard.php">Dashboard</a>
+        <a class="active" href="transaksi.php">Transaksi</a>
+        <a href="status_pesanan.php">Status Pesanan</a>
+        <a href="logout.php" class="text-danger mt-4">Logout</a>
+    </div>
+    <div class="main-content">
         <div class="row">
             <!-- MENU -->
             <div class="col-lg-8">
@@ -239,7 +318,7 @@ $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
             </div>
 
             <!-- KERANJANG -->
-            <div class="col-lg-4 position-fixed" style="right:0">
+            <div class="col-lg-4" style="right:0">
                 <?php if (isset($_SESSION['error'])): ?>
                     <div class="alert alert-danger">
                         <?= $_SESSION['error'];
@@ -312,7 +391,6 @@ $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
                     <strong>✅ Pembayaran Berhasil!</strong><br>
                     Total: <?= rupiah($_SESSION['last_receipt']['total']) ?>,
                     Bayar: <?= rupiah($_SESSION['last_receipt']['pembayaran']) ?>,
-                    Kembali: <?= rupiah($_SESSION['last_receipt']['kembalian']) ?>
                 </div>
                 <div>
                     <a href="cetak_nota.php?id=<?= $_SESSION['last_receipt']['id_transaksi'] ?>"
@@ -341,14 +419,14 @@ $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
                     <input type="hidden" name="pesan" value="1">
 
                     <label class="form-label fw-bold">Jenis Pesanan</label>
-
                     <div class="form-check">
                         <input class="form-check-input"
                             type="radio"
                             name="jenis_pesanan"
                             value="dine_in"
                             id="dinein"
-                            checked>
+                            checked
+                            onclick="toggleDelivery(false)">
                         <label class="form-check-label" for="dinein">
                             🍽️ Makan di Tempat
                         </label>
@@ -367,23 +445,86 @@ $menu = mysqli_query($conn, "SELECT * FROM menu ORDER BY nama_menu ASC");
                     </div>
 
                     <!-- TEMPAT KOSONG UNTUK PENGEMBANGAN -->
-                    <div id="deliveryOption" class="border rounded p-3 d-none">
-                        <p class="text-muted mb-0">
-                            ⚠️ Opsi pembayaran delivery akan ditambahkan di versi selanjutnya.
-                        </p>
+                    <div id="deliveryOption" class="border rounded p-3 d-none mt-3">
+
+                        <label class="form-label fw-bold mb-2">Metode Pembayaran</label>
+
+                        <?php while ($mp = mysqli_fetch_assoc($metode_pembayaran)): ?>
+                            <div class="form-check mb-3">
+
+                                <!-- RADIO -->
+                                <input class="form-check-input metode-radio"
+                                    type="radio"
+                                    name="metode_pembayaran"
+                                    id="mp<?= $mp['id'] ?>"
+                                    value="<?= $mp['id'] ?>"
+                                    data-target="qr<?= $mp['id'] ?>">
+
+                                <!-- LABEL + KETERANGAN (SELALU TAMPIL) -->
+                                <label class="form-check-label" for="mp<?= $mp['id'] ?>">
+                                    <strong><?= htmlspecialchars($mp['nama_metode']) ?></strong>
+
+                                    <?php if (!empty($mp['keterangan'])): ?>
+                                        <div class="text-muted small mt-1">
+                                            <?= htmlspecialchars($mp['keterangan']) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </label>
+
+                                <!-- QR SAJA YANG DISEMBUNYIKAN -->
+                                <?php if (!empty($mp['gambar_qr'])): ?>
+                                    <div id="qr<?= $mp['id'] ?>" class="qr-box d-none mt-2 ms-4">
+                                        <img src="../assets/qr/<?= htmlspecialchars($mp['gambar_qr']) ?>"
+                                            class="img-fluid rounded border"
+                                            style="max-width:160px;">
+                                    </div>
+                                <?php endif; ?>
+
+                            </div>
+                        <?php endwhile; ?>
+
+
+
                     </div>
+
 
                 </div>
 
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button class="btn btn-success">Lanjutkan Pesanan</button>
+                    <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                    <button type="submit" class="btn btn-success">
+                        Lanjutkan Pesanan
+                    </button>
                 </div>
+
 
             </form>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.querySelectorAll('.metode-radio').forEach(radio => {
+            radio.addEventListener('change', function() {
+
+                // sembunyikan semua QR dulu
+                document.querySelectorAll('.qr-box').forEach(qr => {
+                    qr.classList.add('d-none');
+                });
+
+                // tampilkan QR milik radio ini
+                const target = this.dataset.target;
+                if (target) {
+                    const qr = document.getElementById(target);
+                    if (qr) qr.classList.remove('d-none');
+                }
+            });
+        });
+    </script>
 
 </body>
 

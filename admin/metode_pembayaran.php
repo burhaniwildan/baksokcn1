@@ -17,7 +17,7 @@ if (isset($_POST['tambah'])) {
     if (!empty($_FILES['gambar_qr']['name'])) {
         $ext = strtolower(pathinfo($_FILES['gambar_qr']['name'], PATHINFO_EXTENSION));
         $qr  = 'qris_' . time() . '.' . $ext;
-        move_uploaded_file($_FILES['gambar_qr']['tmp_name'], '../assets/qris/' . $qr);
+        move_uploaded_file($_FILES['gambar_qr']['tmp_name'], '../assets/qr/' . $qr);
     }
 
     $stmt = $conn->prepare(
@@ -53,7 +53,7 @@ if (isset($_POST['update'])) {
     if (!empty($_FILES['gambar_qr']['name'])) {
         $ext = strtolower(pathinfo($_FILES['gambar_qr']['name'], PATHINFO_EXTENSION));
         $qr  = 'qris_' . time() . '.' . $ext;
-        move_uploaded_file($_FILES['gambar_qr']['tmp_name'], '../assets/qris/' . $qr);
+        move_uploaded_file($_FILES['gambar_qr']['tmp_name'], '../assets/qr/' . $qr);
         $qr_sql = ", gambar_qr='$qr'";
     }
 
@@ -222,7 +222,8 @@ $data = $conn->query("SELECT * FROM metode_pembayaran ORDER BY id DESC");
                                         <button class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body">
-                                        <img src="../assets/qris/<?= $r['gambar_qr'] ?>" class="img-fluid">
+                                        <img src="../assets/qr/<?= htmlspecialchars($r['gambar_qr']) ?>" class="img-fluid">
+
                                     </div>
                                 </div>
                             </div>
